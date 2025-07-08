@@ -3,6 +3,7 @@ package com.fitness.hediske.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
+import org.hibernate.annotations.DialectOverride.OverridesAnnotation;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -33,7 +34,7 @@ public class User implements UserDetails {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String username;
+    private String userid;
 
     @Column(nullable = false)
     private String password;
@@ -53,6 +54,16 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     private FitnessLevel fitnessLevel;
+
+    @Column(length = 500)
+    private String passwordResetToken;
+
+    @Column(length = 500)
+    private String emailVerificationToken;
+
+
+    private Boolean emailVerified;
+
 
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<String> roles;
@@ -92,6 +103,11 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    @Override
+    public String getUsername(){
+        return email;
     }
 
 

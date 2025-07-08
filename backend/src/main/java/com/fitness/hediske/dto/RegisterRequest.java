@@ -1,9 +1,6 @@
 package com.fitness.hediske.dto;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Set;
-
 import com.fitness.hediske.enums.FitnessLevel;
 import com.fitness.hediske.enums.Gender;
 
@@ -19,7 +16,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class RegisterRequest {
-    private Long id;
     @NotBlank(message = "Username is required")
     private String username;
     @NotBlank(message = "Email  is required")
@@ -33,6 +29,4 @@ public class RegisterRequest {
     private Double height;
     private Double weight;
     private FitnessLevel fitnessLevel;
-    private Set<String> roles;
-    private LocalDateTime createdAt;
 }

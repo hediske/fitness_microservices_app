@@ -10,6 +10,7 @@ import com.fitness.hediske.dto.AuthenticationRequest;
 import com.fitness.hediske.dto.AuthenticationResponse;
 import com.fitness.hediske.dto.RegisterRequest;
 import com.fitness.hediske.dto.RegisterResponse;
+import com.fitness.hediske.dto.TokenRefreshRequest;
 import com.fitness.hediske.services.AuthenticationService;
 
 import lombok.RequiredArgsConstructor;
@@ -31,4 +32,8 @@ public class AuthenticationController {
         return ResponseEntity.ok(authenticationService.authenticate(request));
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthenticationResponse> refreshToken(@RequestBody TokenRefreshRequest request) {
+        return ResponseEntity.ok(authenticationService.refreshToken(request.getRefreshToken()));
+    }
 }

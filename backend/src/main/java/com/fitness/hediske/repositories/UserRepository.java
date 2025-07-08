@@ -9,9 +9,9 @@ import com.fitness.hediske.entities.User;
 public interface  UserRepository extends JpaRepository<User, Long> {
     
     // Custom query methods can be defined here if needed
-    Optional<User> findByUsername(String username);
+    Optional<User> findByUserid(String useris);
     Optional<User> findByEmail(String email);
-    boolean existsByUsername(String username);
+    boolean existsByUserid(String username);
     boolean existsByEmail(String email);
 
     

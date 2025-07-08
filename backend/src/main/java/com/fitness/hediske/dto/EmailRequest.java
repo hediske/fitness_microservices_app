@@ -1,17 +1,18 @@
 package com.fitness.hediske.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class RegisterResponse {
-    String message;
-    Long userId;
-    String email;
-    String username;
+public class EmailRequest {
+    @NotBlank
+    @Email
+    private String email;
 }
