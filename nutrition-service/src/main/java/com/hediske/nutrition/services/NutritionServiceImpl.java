@@ -1,22 +1,32 @@
 package com.hediske.nutrition.services;
 
+import com.hediske.nutrition.dto.CategoryDto;
 import com.hediske.nutrition.dto.FoodItemDto;
 import com.hediske.nutrition.dto.MealEntryRequest;
 import com.hediske.nutrition.dto.MealEntryResponse;
+import com.hediske.nutrition.dto.UserStatsDto;
 import com.hediske.nutrition.entities.Category;
 import com.hediske.nutrition.entities.FoodItem;
 import com.hediske.nutrition.entities.MealEntry;
 import com.hediske.nutrition.repositories.CategoryRepository;
+import com.hediske.nutrition.repositories.FoodItemCustomRepository;
 import com.hediske.nutrition.repositories.FoodItemRepository;
 import com.hediske.nutrition.repositories.MealEntryRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.val;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +36,7 @@ public class NutritionServiceImpl implements NutritionService {
     private final MealEntryRepository mealEntryRepository;
     private final FoodItemRepository foodItemRepository;
     private final CategoryRepository categoryRepository;
+    private final FoodItemCustomRepository foodItemCustomRepository;
 
     @Override
     @Transactional
@@ -200,7 +211,7 @@ public class NutritionServiceImpl implements NutritionService {
             Integer maxFats,
             Pageable pageable
     ) {
-        return foodItemRepository.findByFilters(
+        return foodItemCustomRepository.findByFilters(
                 name,
                 category,
                 minCalories,
@@ -221,6 +232,144 @@ public class NutritionServiceImpl implements NutritionService {
                 .orElseThrow(() -> new EntityNotFoundException("Food item not found"));
         return item.getImageUrl();
     }
+
+
+
+    @Override
+    @Transactional
+    public CategoryDto createCategory(CategoryDto dto) {
+        if (categoryRepository.existsByNameIgnoreCase(dto.getName())) {
+            throw new IllegalArgumentException("Category already exists");
+        }
+    
+        Category category = Category.builder()
+                .name(dto.getName())
+                .description(dto.getDescription())
+                .build();
+    
+        return mapCategoryToDto(categoryRepository.save(category));
+    }
+    
+
+    @Override
+    public List<CategoryDto> getAllCategories() {
+        return categoryRepository.findAll()
+                .stream()
+                .map(this::mapCategoryToDto)
+                .collect(Collectors.toList());
+    }
+
+
+    @Override
+    public Page<FoodItemDto> getFoodItemsByCategory(String categoryName, Pageable pageable) {
+        return foodItemRepository.findByCategoryNameIgnoreCase(categoryName, pageable)
+                .map(this::mapToDto);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteCategory(String categoryName) {
+        Category category = categoryRepository.findByNameIgnoreCase(categoryName)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+    
+        if (!foodItemRepository.findByCategory(category).isEmpty()) {
+            throw new IllegalStateException("Cannot delete category with associated food items");
+        }
+    
+        categoryRepository.delete(category);
+    }
+    
+    @Override
+    @Transactional
+    public void updateCategory(String oldName, CategoryDto newData) {
+        Category category = categoryRepository.findByNameIgnoreCase(oldName)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+    
+        category.setName(newData.getName());
+        category.setDescription(newData.getDescription());
+    
+        categoryRepository.save(category);
+    }
+    
+    @Override
+    public Map<String, Object> getGlobalNutritionStats() {
+        Map<String, Object> stats = new HashMap<>();
+    
+        List<FoodItem> items = foodItemRepository.findAll();
+    
+        stats.put("totalFoodItems", items.size());
+        stats.put("averageCalories", items.stream().mapToInt(FoodItem::getCalories).average().orElse(0));
+        stats.put("averageProtein", items.stream().mapToInt(FoodItem::getProtein).average().orElse(0));
+        stats.put("averageCarbs", items.stream().mapToInt(FoodItem::getCarbs).average().orElse(0));
+        stats.put("averageFats", items.stream().mapToInt(FoodItem::getFats).average().orElse(0));
+    
+        val top10 = mealEntryRepository.findTopConsumedFoodItems(PageRequest.of(0, 10));
+            top10.stream()
+                .map(row -> {
+                    if (row[0] == null || row[1] == null) {
+                        return null; // Skip null rows
+                    }
+                    FoodItem item = (FoodItem) row[0];
+                    Long count = (Long) row[1];
+                    
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("name", item.getName());
+                    map.put("usageCount", count);
+                    map.put("category", item.getCategory() != null ? item.getCategory().getName() : null);
+                    map.put("avatar", item.getImageUrl());
+
+                    return map;
+                })
+                .collect(Collectors.toList());
+    
+        stats.put("top10ConsumedFoods", top10);
+        return stats;
+    }
+    
+    @Override
+    public UserStatsDto getUserWeeklyStats(String userEmail) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneWeekAgo = now.minusWeeks(1);
+        return computeUserStats(userEmail, oneWeekAgo, now);
+    }
+    
+    @Override
+    public UserStatsDto getUserMonthlyStats(String userEmail) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneMonthAgo = now.minusMonths(1);
+        return computeUserStats(userEmail, oneMonthAgo, now);
+    }
+    
+    private UserStatsDto computeUserStats(String userEmail, LocalDateTime from, LocalDateTime to) {
+        List<MealEntry> meals = mealEntryRepository.findByUserEmailAndConsumedAtBetween(userEmail, from, to);
+    
+        int totalCalories = 0;
+        int totalProtein = 0;
+        int totalCarbs = 0;
+        int totalFats = 0;
+    
+        for (MealEntry entry : meals) {
+            FoodItem item = entry.getFoodItem();
+            int quantity = entry.getQuantityInGrams() != null ? entry.getQuantityInGrams() : 100;
+    
+            totalCalories += item.getCalories() * quantity / 100;
+            totalProtein += item.getProtein() * quantity / 100;
+            totalCarbs += item.getCarbs() * quantity / 100;
+            totalFats += item.getFats() * quantity / 100;
+        }
+    
+        return UserStatsDto.builder()
+                .totalCalories(totalCalories)
+                .totalProtein(totalProtein)
+                .totalCarbs(totalCarbs)
+                .totalFats(totalFats)
+                .totalMeals(meals.size())
+                .start(from)
+                .end(to)
+                .build();
+    }
+    
+
 
 
 
@@ -266,6 +415,14 @@ public class NutritionServiceImpl implements NutritionService {
                 .consumedAt(meal.getConsumedAt())
                 .build();
     }
+
+    private CategoryDto mapCategoryToDto(Category category) {
+        return CategoryDto.builder()
+                .name(category.getName())
+                .description(category.getDescription())
+                .build();
+    }
+    
 
 
 }

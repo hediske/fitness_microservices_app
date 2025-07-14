@@ -1,6 +1,7 @@
 package com.hediske.nutrition.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import lombok.*;
 
@@ -15,6 +16,6 @@ public class UserStatsDto {
     private int totalProtein;
     private int totalCarbs;
     private int totalFats;
-    private LocalDate start;
-    private LocalDate end;
+    private LocalDateTime start;
+    private LocalDateTime end;
 }
