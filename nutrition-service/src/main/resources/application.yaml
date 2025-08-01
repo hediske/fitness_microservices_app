@@ -23,3 +23,8 @@ eureka:
     service-url:
       defaultZone: http://eureka-server:8761/eureka/
       
+
+logging:
+  level:
+    com.netflix.discovery: DEBUG
+    org.springframework.cloud.netflix.eureka: DEBUG
