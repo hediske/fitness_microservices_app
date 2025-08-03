@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: auth-service
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  datasource:
+    username: fitness_user
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 5
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 200000
+      auto-commit: true
+
+application:
+  security:
+    jwt:
+      secret-key: QNP5EZNjpOBl++i0jpN06cmaoeCA+d3VMoFHiOns7G4=
+      expiration: 86400000
+      refresh-token:
+        expiration: 604800000
+      password-reset:
+        expiration: 360000
+      email-verification:
+        expiration: 86400000

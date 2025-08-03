@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
-    
+
     private final JavaMailSender mailSender;
     private final Environment env;
 
@@ -28,7 +28,7 @@ public class EmailServiceImpl implements EmailService {
             message.setTo(toEmail);
             message.setSubject("Verify your email address");
             message.setText("Please click the following link to verify your email address:\n" + verificationUrl);
-            
+
             mailSender.send(message);
         } catch (Exception e) {
             throw new EmailSendingException("Failed to send verification email", e);
