@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
-    
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -41,11 +41,9 @@ public class AuthenticationService {
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         try {
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    request.getEmail(),
-                    request.getPassword()
-                )
-            );
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()));
 
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -80,18 +78,18 @@ public class AuthenticationService {
     public RegisterResponse register(RegisterRequest request) {
         try {
             log.info("Attempting to register user with email: {}", request.getEmail());
-            
+
             // Validate username and email
             if (userRepository.existsByUserid(request.getUsername())) {
                 log.warn("Registration failed - username already exists: {}", request.getUsername());
                 throw new UsernameAlreadyExistsException("Username already exists");
             }
-            
+
             if (userRepository.existsByEmail(request.getEmail())) {
                 log.warn("Registration failed - email already exists: {}", request.getEmail());
                 throw new EmailAlreadyExistsException("Email already exists");
             }
-    
+
             // Create user entity
             User user = User.builder()
                     .userid(request.getUsername())
@@ -111,28 +109,28 @@ public class AuthenticationService {
                     .accountNonLocked(true)
                     .emailVerified(false)
                     .build();
-    
+
             log.debug("Saving user to database");
             user = userRepository.save(user);
             log.info("User saved with ID: {}", user.getId());
-    
+
             // Generate and send verification email
             log.debug("Generating verification token");
             String verificationToken = jwtService.generateEmailVerificationToken(user);
             user.setEmailVerificationToken(verificationToken);
             userRepository.save(user);
-    
+
             log.debug("Sending verification email");
             emailService.sendVerificationEmail(user.getEmail(), verificationToken);
             log.info("Verification email sent to: {}", user.getEmail());
-    
+
             return RegisterResponse.builder()
                     .message("User registered successfully. Please check your email for verification.")
                     .userId(user.getId())
                     .email(user.getEmail())
                     .username(user.getUsername())
                     .build();
-    
+
         } catch (UsernameAlreadyExistsException | EmailAlreadyExistsException e) {
             // These are expected exceptions, just rethrow them
             throw e;
@@ -153,12 +151,12 @@ public class AuthenticationService {
             }
 
             String newAccessToken = jwtService.generateToken(user);
-            
+
             return AuthenticationResponse.builder()
                     .token(newAccessToken)
                     .refreshToken(refreshToken)
                     .build();
-                    
+
         } catch (Exception e) {
             log.error("Token refresh error", e);
             throw new TokenRefreshException("Failed to refresh token: " + e.getMessage());
@@ -210,16 +208,14 @@ public class AuthenticationService {
         emailService.sendVerificationEmail(user.getEmail(), newVerificationToken);
     }
 
-
-
     public String initiatePasswordReset(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
+
         String resetToken = jwtService.generatePasswordResetToken(user);
         user.setPasswordResetToken(resetToken);
         userRepository.save(user);
-        
+
         emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
         return resetToken;
     }
@@ -228,11 +224,11 @@ public class AuthenticationService {
         String email = jwtService.extractUsername(token);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
+
         if (!jwtService.isPasswordResetTokenValid(token, user)) {
             throw new InvalidTokenException("Invalid or expired password reset token");
         }
-        
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setPasswordResetToken(null);
         userRepository.save(user);
