@@ -6,8 +6,59 @@ spring:
     name: gateway-service
   cloud:
     gateway:
-      default-filters:
-        - AddRequestHeader=X-Gateway, FitnessGateway
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: auth-swagger
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/v3/api-docs
+          filters:
+            - RewritePath=/api/auth/v3/api-docs, /v3/api-docs
 
+        - id: nutrition-swagger
+          uri: lb://nutrition-service
+          predicates:
+            - Path=/api/nutrition/v3/api-docs
+          filters:
+            - RewritePath=/api/nutrition/v3/api-docs, /v3/api-docs
+
+        - id: workout-swagger
+          uri: lb://workout-service
+          predicates:
+            - Path=/api/workout/v3/api-docs
+          filters:
+            - RewritePath=/api/workout/v3/api-docs, /v3/api-docs
+
+        - id: auth-route
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+
+        - id: nutrition-route
+          uri: lb://nutrition-service
+          predicates:
+            - Path=/api/nutrition/**
+
+        - id: workout-route
+          uri: lb://workout-service
+          predicates:
+            - Path=/api/workout/**
 jwt:
   secret: QNP5EZNjpOBl++i0jpN06cmaoeCA+d3VMoFHiOns7G4=
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Auth Service
+        url: /api/auth/v3/api-docs
+      - name: Nutrition Service
+        url: /api/nutrition/v3/api-docs
+      - name: Exercise Service
+        url: /api/workout/v3/api-docs
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG

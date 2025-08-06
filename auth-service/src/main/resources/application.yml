@@ -32,3 +32,10 @@ application:
         expiration: 360000
       email-verification:
         expiration: 86400000
+  base-url: http://auth-service:8081
+
+cors:
+  allowed-origin: lb://api-gateway:8080
+
+server:
+  port: 8081

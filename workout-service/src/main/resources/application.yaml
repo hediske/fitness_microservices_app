@@ -18,3 +18,6 @@ logging:
   level:
     com.netflix.discovery: DEBUG
     org.springframework.cloud.netflix.eureka: DEBUG
+
+cors:
+  allowed-origin: lb://api-gateway:8080

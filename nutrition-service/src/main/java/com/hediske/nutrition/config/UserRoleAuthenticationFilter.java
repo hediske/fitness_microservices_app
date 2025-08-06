@@ -40,6 +40,7 @@ public class UserRoleAuthenticationFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(email, null, authorities);
 
+            System.out.println("Setting authentication for user: " + email + " with roles: " + authorities);
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
 

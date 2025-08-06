@@ -10,6 +10,8 @@ import com.fitness.hediske.dto.AuthenticationRequest;
 import com.fitness.hediske.dto.AuthenticationResponse;
 import com.fitness.hediske.dto.RegisterRequest;
 import com.fitness.hediske.dto.RegisterResponse;
+import com.fitness.hediske.dto.TokenIntrospectionRequest;
+import com.fitness.hediske.dto.TokenIntrospectionResponse;
 import com.fitness.hediske.dto.TokenRefreshRequest;
 import com.fitness.hediske.services.AuthenticationService;
 
@@ -36,4 +38,10 @@ public class AuthenticationController {
     public ResponseEntity<AuthenticationResponse> refreshToken(@RequestBody TokenRefreshRequest request) {
         return ResponseEntity.ok(authenticationService.refreshToken(request.getRefreshToken()));
     }
+    
+    @PostMapping("/introspect")
+    public ResponseEntity<TokenIntrospectionResponse> introspectToken(@RequestBody TokenIntrospectionRequest request) {
+        return ResponseEntity.ok(authenticationService.introspectToken(request.getToken()));
+    }
+
 }

@@ -1,32 +1,31 @@
 package com.hediske.api_gateway.config;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-
 import reactor.core.publisher.Mono;
 
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class JwtAuthFilter implements WebFilter {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    private final WebClient.Builder webClientBuilder;
 
     private final List<String> publicRoutes = List.of(
-        "/api/auth/**",
-        "/swagger-ui/**",
-        "/v3/api-docs/**"
+            "/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**"
+    // ... other public routes
     );
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -35,40 +34,49 @@ public class JwtAuthFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        // Skip public routes
         if (publicRoutes.stream().anyMatch(pattern -> pathMatcher.match(pattern, path))) {
             return chain.filter(exchange);
         }
 
         List<String> authHeaders = exchange.getRequest().getHeaders().get("Authorization");
+
         if (authHeaders == null || authHeaders.isEmpty() || !authHeaders.get(0).startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return unauthorized(exchange, "Missing or malformed Authorization header");
         }
 
-        try {
-            String token = authHeaders.get(0).substring(7);
-            SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        String token = authHeaders.get(0).substring(7);
 
-            Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-            String email = claims.getSubject();
-            String role = claims.get("role", String.class);
-
-            // Inject user info into headers for downstream services
-            exchange.getRequest().mutate()
-                .header("X-User-Email", email)
-                .header("X-User-Role", role)
+        WebClient webClient = webClientBuilder
                 .build();
 
-            return chain.filter(exchange);
-        } catch (Exception e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
+        return webClient.post()
+                .uri("lb://auth-service/api/auth/introspect")
+                .bodyValue(Map.of("token", token))
+                .retrieve()
+                .bodyToMono(TokenIntrospectionResponse.class)
+                .flatMap(response -> {
+                    if (!response.isActive()) {
+                        return unauthorized(exchange, "Token invalid or expired");
+                    }
+
+                    exchange.getRequest().mutate()
+                            .header("X-User-Email", response.getEmail())
+                            .header("X-User-Role", response.getRole())
+                            .build();
+
+                    return chain.filter(exchange);
+                })
+                .onErrorResume(e -> unauthorized(exchange, "Error validating token: " + e.getMessage()));
     }
+
+    private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        String errorJson = String.format("{\"error\": \"%s\", \"timestamp\": \"%s\"}", message, Instant.now());
+        exchange.getResponse().getHeaders().add("Content-Type", "application/json");
+        return exchange.getResponse()
+                .writeWith(Mono.just(exchange.getResponse()
+                        .bufferFactory()
+                        .wrap(errorJson.getBytes(StandardCharsets.UTF_8))));
+    }
+
 }

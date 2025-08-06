@@ -34,28 +34,31 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/swagger-ui.html")
+                                "/swagger-ui.html"
+
+                        )
                         .permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(eh -> eh
-                        .accessDeniedHandler((req, res, ex) -> {
-                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            res.setContentType("application/json");
-                            res.getWriter()
-                                    .write("{\"error\": \"You do not have permission to access this resource\"}");
-                        })
-                        .authenticationEntryPoint((req, res, ex) -> {
-                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            res.setContentType("application/json");
-                            res.getWriter().write("{\"error\": \"Authentication required or token invalid\"}");
-                        }))
+                // .exceptionHandling(eh -> eh
+                // .accessDeniedHandler((req, res, ex) -> {
+                // res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                // res.setContentType("application/json");
+                // res.getWriter()
+                // .write("{\"error\": \"You do not have permission to access this
+                // resource\"}");
+                // })
+                // .authenticationEntryPoint((req, res, ex) -> {
+                // res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                // res.setContentType("application/json");
+                // res.getWriter().write("{\"error\": \"Authentication required or token
+                // invalid\"}");
+                // }))
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -17,8 +17,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
-
-
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -29,25 +27,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
 
         final String jwtHeader = request.getHeader("Authorization");
-        final String jwt ;
-        final String username ;
-
+        final String jwt;
+        final String username;
 
         if (jwtHeader == null || !jwtHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
+            System.out.println("No JWT token found in request headers");
             return;
         }
-
 
         jwt = jwtHeader.substring(7);
         username = jwtService.extractUsername(jwt);
 
         if (username != null && request.getUserPrincipal() == null) {
             var userDetails = userDetailsService.loadUserByUsername(username);
-            
+
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 var authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
@@ -57,12 +53,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
 
-
         }
         filterChain.doFilter(request, response);
-        
 
     }
-    
-    
+
 }
