@@ -1,6 +1,5 @@
 package com.hediske.nutrition.config;
 
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,22 +22,28 @@ public class UserRoleAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-        
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
+
+        System.out.println("UserRoleAuthenticationFilter: Processing request...");
+
+
         String email = request.getHeader(USER_EMAIL_HEADER);
         String role = request.getHeader(USER_ROLE_HEADER);
 
+        System.out.println("EMAIL: " + email);
+        System.out.println("ROLE: " + role);
+
         if (email != null && role != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            
+
             // Convert role string to SimpleGrantedAuthority list
             // Suppose role can be comma separated for multiple roles
             List<SimpleGrantedAuthority> authorities = List.of(role.split(",")).stream()
-                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.trim()))
-                .toList();
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r.trim()))
+                    .toList();
 
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(email, null, authorities);
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(email, null,
+                    authorities);
 
             System.out.println("Setting authentication for user: " + email + " with roles: " + authorities);
             SecurityContextHolder.getContext().setAuthentication(authToken);

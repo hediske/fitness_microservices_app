@@ -6,6 +6,14 @@ spring:
     name: gateway-service
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowed-origins: "http://localhost:5173" # Your Vue app origin
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
       discovery:
         locator:
           enabled: true
@@ -28,9 +36,9 @@ spring:
         - id: workout-swagger
           uri: lb://workout-service
           predicates:
-            - Path=/api/workout/v3/api-docs
+            - Path=/api/exercise/v3/api-docs
           filters:
-            - RewritePath=/api/workout/v3/api-docs, /v3/api-docs
+            - RewritePath=/api/exercise/v3/api-docs, /v3/api-docs
 
         - id: auth-route
           uri: lb://auth-service
@@ -41,11 +49,15 @@ spring:
           uri: lb://nutrition-service
           predicates:
             - Path=/api/nutrition/**
+          # filters:
+          #   - JwtAuthFilter
 
         - id: workout-route
           uri: lb://workout-service
           predicates:
-            - Path=/api/workout/**
+            - Path=/api/exercise/**
+          # filters:
+          #   - JwtAuthFilter
 jwt:
   secret: QNP5EZNjpOBl++i0jpN06cmaoeCA+d3VMoFHiOns7G4=
 
@@ -57,8 +69,11 @@ springdoc:
       - name: Nutrition Service
         url: /api/nutrition/v3/api-docs
       - name: Exercise Service
-        url: /api/workout/v3/api-docs
+        url: /api/exercise/v3/api-docs
 
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+
+cors:
+  allowed-origin: http://localhost:5173
